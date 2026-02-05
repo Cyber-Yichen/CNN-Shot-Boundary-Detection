@@ -29,12 +29,13 @@ A lightweight CNN-based system for automatic shot boundary detection in videos, 
 
 ## ✨ Features
 
-- 🚀 **Multiple Model Architectures**: CNN, MLP, and Linear models for comparison
+- 🎯 **CNN-based Architecture**: Lightweight CNN model designed for efficient shot boundary detection
 - 📊 **Multi-Channel Input**: Support for 9-channel (2FPS) and 21-channel (4FPS) inputs
 - ⚖️ **Class Imbalance Handling**: Weighted loss function with configurable pos_weight
 - 📈 **Comprehensive Metrics**: Precision, Recall, F1, PR-AUC, ROC-AUC, and per-video analysis
 - 🛠️ **Complete Toolchain**: Dataset creation, training, evaluation, and report visualization
 - 🌐 **Web-based Tools**: Flask and Streamlit applications for data preparation and result viewing
+- 🔬 **Baseline Comparisons**: Includes MLP and Linear models for performance benchmarking
 
 ---
 
@@ -53,12 +54,12 @@ CNN-Shot-Boundary-Detection/
 │   ├── rsys/               # Report system modules
 │   └── requirements.txt    # Dependencies
 ├── Traning Files/          # Training notebooks and code
-│   ├── CNN_2FPS_9CH.ipynb  # CNN model with 9-channel input
-│   ├── CNN_4FPS_21CH.ipynb # CNN model with 21-channel input
-│   ├── MLP_2FPS_9CH.ipynb  # MLP model with 9-channel input
-│   ├── MLP_4FPS_21CH.ipynb # MLP model with 21-channel input
-│   ├── Linear_2FPS_9CH.ipynb   # Linear model with 9-channel input
-│   ├── Linear_4FPS_21CH.ipynb  # Linear model with 21-channel input
+│   ├── CNN_2FPS_9CH.ipynb  # Main: CNN model with 9-channel input
+│   ├── CNN_4FPS_21CH.ipynb # Main: CNN model with 21-channel input
+│   ├── MLP_2FPS_9CH.ipynb  # Baseline: MLP model (for comparison)
+│   ├── MLP_4FPS_21CH.ipynb # Baseline: MLP model (for comparison)
+│   ├── Linear_2FPS_9CH.ipynb   # Baseline: Linear model (for comparison)
+│   ├── Linear_4FPS_21CH.ipynb  # Baseline: Linear model (for comparison)
 │   ├── code/               # Additional training code
 │   └── movie/              # Video dataset directory
 ├── Traning Reports/        # Generated training reports
@@ -266,15 +267,42 @@ A Flask-based web application for viewing training reports:
 
 ## 📋 Model Comparison
 
+> **Note**: MLP and Linear models are included for **performance comparison** purposes only. The CNN model is the main focus of this project.
+
 | Model | Input | Parameters | Use Case |
 |-------|-------|------------|----------|
-| **CNN** | 9CH / 21CH | ~1.5M | Best accuracy, recommended |
-| **MLP** | 9CH / 21CH | ~800K | Faster training, moderate accuracy |
-| **Linear** | 9CH / 21CH | ~400K | Baseline, fastest |
+| **CNN** | 9CH / 21CH | ~1.5M | **Main model** - Best accuracy, recommended for production |
+| **MLP** | 9CH / 21CH | ~800K | Baseline comparison - Faster training, moderate accuracy |
+| **Linear** | 9CH / 21CH | ~400K | Baseline comparison - Simplest model, fastest |
 
 ---
 
 ## 🔬 Technical Details
+
+### Training Environment
+
+Based on actual training runs:
+
+| Component | Specification |
+|-----------|--------------|
+| **GPU** | NVIDIA H800 PCIe |
+| **CUDA** | CUDA 11.8 |
+| **PyTorch** | 2.0.0+cu118 |
+| **Python** | 3.8.10 |
+| **Platform** | Linux (x86_64) |
+
+### Training Configuration
+
+| Parameter | Value |
+|-----------|-------|
+| **Epochs** | 50 |
+| **Training Time** | ~78 minutes (~4657 seconds) |
+| **Optimizer** | Adam |
+| **Learning Rate** | 1e-5 |
+| **Loss Function** | CrossEntropyLoss (weighted) |
+| **Class Weight (Cut)** | 40.0 |
+| **Class Weight (Non-Cut)** | 1.0 |
+| **Threshold** | 0.95 |
 
 ### Dependencies
 
@@ -291,7 +319,7 @@ A Flask-based web application for viewing training reports:
 
 - **Minimum**: 8GB RAM, CPU-only (slow training)
 - **Recommended**: 16GB RAM, NVIDIA GPU with 8GB+ VRAM
-- **Tested on**: NVIDIA RTX 3090, NVIDIA A100
+- **Tested on**: NVIDIA RTX 3090, NVIDIA A100, NVIDIA H800
 
 ---
 
@@ -318,6 +346,15 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 **Cyber-Yichen** - [@Cyber-Yichen](https://github.com/Cyber-Yichen)
 
 Project Link: [https://github.com/Cyber-Yichen/CNN-Shot-Boundary-Detection](https://github.com/Cyber-Yichen/CNN-Shot-Boundary-Detection)
+
+---
+
+## 🤖 AI Contributors
+
+This project was developed with assistance from:
+
+- **ChatGPT** (OpenAI)
+- **Gemini** (Google)
 
 ---
 
