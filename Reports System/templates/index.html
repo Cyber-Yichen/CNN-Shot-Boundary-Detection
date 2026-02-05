@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}训练报告汇总{% endblock %}
+
+{% block content %}
+
+<!-- 汇总统计卡片 -->
+<div class="row mb-4">
+  <div class="col-6 col-md-3 mb-3">
+    <div class="card text-center">
+      <div class="card-body">
+        <div class="text-muted small">训练次数</div>
+        <div class="fs-4 fw-bold">{{ total_reports }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3 mb-3">
+    <div class="card text-center">
+      <div class="card-body">
+        <div class="text-muted small">模型数</div>
+        <div class="fs-4 fw-bold">{{ total_models }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3 mb-3">
+    <div class="card text-center">
+      <div class="card-body">
+        <div class="text-muted small">轮数总和</div>
+        <div class="fs-4 fw-bold">{{ total_epochs }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3 mb-3">
+    <div class="card text-center">
+      <div class="card-body">
+        <div class="text-muted small">总训练时间</div>
+        <div class="fs-5 fw-bold">{{ total_time_str or "-" }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 报告列表 -->
+<div class="card">
+  <div class="card-header fw-bold">
+    训练报告列表
+  </div>
+  <div class="card-body p-0">
+
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="sortable" data-key="id">报告名</th>
+          <th class="sortable text-end" data-key="epochs">轮数</th>
+          <th class="sortable text-end" data-key="weight">权重</th>
+          <th class="text-end">训练时长</th>
+          <th class="text-center">操作</th>
+        </tr>
+      </thead>
+
+      <tbody id="reportTbody">
+        {% for report in reports_list %}
+        <tr
+          data-id="{{ report.id }}"
+          data-epochs="{{ report.epochs }}"
+          data-weight="{{ report.weight if report.weight is not none else '' }}"
+        >
+          <td class="fw-semibold">{{ report.id }}</td>
+          <td class="text-end">{{ report.epochs }}</td>
+          <td class="text-end">{{ report.weight_str }}</td>
+          <td class="text-end">{{ report.time_str if report.time_str else '-' }}</td>
+          <td class="text-center">
+            <a href="{{ url_for('report_detail', report_id=report.id) }}"
+               class="btn btn-sm btn-primary">
+              查看
+            </a>
+            <a href="{{ url_for('download_report', report_id=report.id) }}"
+               class="btn btn-sm btn-secondary">
+              下载
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+
+        {% if reports_list|length == 0 %}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">
+            暂无报告文件
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const tbody = document.getElementById('reportTbody');
+  if (!tbody) return;
+
+  const getValue = (tr, key) => {
+    const v = tr.dataset[key];
+    if (key === 'epochs' || key === 'weight') {
+      const n = parseFloat(v);
+      return isNaN(n) ? null : n;
+    }
+    return (v || '').toString();
+  };
+
+  const compare = (a, b, key, asc) => {
+    const va = getValue(a, key);
+    const vb = getValue(b, key);
+
+    // 空值放最后
+    if (va === null && vb === null) return 0;
+    if (va === null) return 1;
+    if (vb === null) return -1;
+
+    if (typeof va === 'number' && typeof vb === 'number') {
+      return asc ? (va - vb) : (vb - va);
+    }
+    return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+  };
+
+  const sortState = { key: 'id', asc: true };
+
+  document.querySelectorAll('th.sortable').forEach(th => {
+    th.style.cursor = 'pointer';
+    th.title = '点击排序';
+
+    th.addEventListener('click', () => {
+      const key = th.dataset.key;
+      if (!key) return;
+
+      if (sortState.key === key) {
+        sortState.asc = !sortState.asc;
+      } else {
+        sortState.key = key;
+        sortState.asc = true;
+      }
+
+      const rows = Array.from(tbody.querySelectorAll('tr'))
+        .filter(tr => tr.dataset && tr.dataset.id !== undefined);
+
+      rows.sort((a, b) => compare(a, b, sortState.key, sortState.asc));
+      rows.forEach(r => tbody.appendChild(r));
+
+      // 更新箭头
+      document.querySelectorAll('th.sortable').forEach(x => {
+        x.textContent = x.textContent.replace(/[\s▲▼]+$/, '');
+      });
+      th.textContent += sortState.asc ? ' ▲' : ' ▼';
+    });
+  });
+})();
+</script>
+{% endblock %}

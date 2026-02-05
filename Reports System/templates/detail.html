@@ -1,0 +1,497 @@
+{% extends "base.html" %}
+{% block title %}训练详情 - {{ report_id }}{% endblock %}
+
+{% block content %}
+  <h3 class="mb-3">训练报告: {{ report_id }}</h3>
+
+  <!-- 环境与参数：训练 / 测试（带原始变量名） -->
+  <div class="row g-3 mb-3">
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header">{{ train_env_panel.title }}</div>
+        <div class="card-body">
+          {% if train_env_panel["items"] and train_env_panel["items"]|length > 0 %}
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th style="width: 28%;">变量名</th>
+                  <th style="width: 30%;">含义</th>
+                  <th>值</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in train_env_panel["items"] %}
+                <tr>
+                  <td><code>{{ item.key }}</code></td>
+                  <td>{{ item.label }}</td>
+                  <td>{{ item.value }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="text-muted">未读取到训练环境信息（run_info）。</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header">{{ test_env_panel.title }}</div>
+        <div class="card-body">
+          {% if test_env_panel["items"] and test_env_panel["items"]|length > 0 %}
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th style="width: 28%;">变量名</th>
+                  <th style="width: 30%;">含义</th>
+                  <th>值</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in test_env_panel["items"] %}
+                <tr>
+                  <td><code>{{ item.key }}</code></td>
+                  <td>{{ item.label }}</td>
+                  <td>{{ item.value }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="text-muted">未读取到测试环境信息（run_info）。</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 训练曲线：两列布局 6 张图 -->
+  <div class="card mb-3">
+    <div class="card-header">训练集曲线（epoch_metrics）</div>
+    <div class="card-body">
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="border rounded p-2">
+            <div class="small text-muted mb-1">Loss</div>
+            <div style="height: 190px;">
+              <canvas id="c1_loss"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="border rounded p-2">
+            <div class="small text-muted mb-1">Precision / Recall / F1</div>
+            <div style="height: 190px;">
+              <canvas id="c2_prf"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="border rounded p-2">
+            <div class="small text-muted mb-1">AP(PR-AUC) / AUC(ROC)</div>
+            <div style="height: 190px;">
+              <canvas id="c3_auc"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="border rounded p-2">
+            <div class="small text-muted mb-1">Accuracy（若无则为空）</div>
+            <div style="height: 190px;">
+              <canvas id="c4_acc"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="border rounded p-2">
+            <div class="small text-muted mb-1">正类预测率 <code>pos_pred_rate</code></div>
+            <div style="height: 190px;">
+              <canvas id="c5_posrate"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="border rounded p-2">
+            <div class="small text-muted mb-1">学习率 <code>lr</code>（若无则为空）</div>
+            <div style="height: 190px;">
+              <canvas id="c6_lr"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="small text-muted mt-3">
+        建议阅读顺序：先看 <code>pos_pred_rate</code> 判断“乱报切点”程度，再看 PRF 是否平衡，最后结合 AP/AUC 评估整体质量。
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- 最终指标：训练 / 测试 分开 -->
+  <div class="row g-3 mb-3">
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header">{{ train_metrics_panel.title }}</div>
+        <div class="card-body">
+          {% if train_metrics_panel["items"] and train_metrics_panel["items"]|length > 0 %}
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <tbody>
+                {% for item in train_metrics_panel["items"] %}
+                <tr>
+                  <td style="width: 48%;">{{ item.label }}</td>
+                  <td>{{ item.value }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="text-muted">该报告未找到训练集 final_test 指标。</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header">{{ test_metrics_panel.title }}</div>
+        <div class="card-body">
+          {% if test_metrics_panel["items"] and test_metrics_panel["items"]|length > 0 %}
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <tbody>
+                {% for item in test_metrics_panel["items"] %}
+                <tr>
+                  <td style="width: 48%;">{{ item.label }}</td>
+                  <td>{{ item.value }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="text-muted">该报告未找到测试集 cut_test final_test 指标。</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 测试集帧轴：每个视频 TP/FP/FN 帧位置 -->
+  <style>
+    .timeline-wrap { padding: 10px 12px; }
+    .timeline-axis {
+      position: relative;
+      height: 28px;
+      border-radius: 999px;
+      background: #f1f3f5;
+      border: 1px solid #e9ecef;
+    }
+    .timeline-line {
+      position: absolute;
+      left: 10px; right: 10px;
+      top: 50%;
+      height: 2px;
+      transform: translateY(-50%);
+      background: #ced4da;
+    }
+    .tick {
+      position: absolute;
+      top: 50%;
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      transform: translate(-50%, -50%);
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
+    }
+    .tick.tp { background: #198754; }
+    .tick.fp { background: #dc3545; }
+    .tick.fn { background: #fd7e14; }
+    .timeline-meta { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .badge-dot { display:inline-flex; align-items:center; gap:6px; }
+    .dot {
+      width:10px; height:10px; border-radius:999px; display:inline-block;
+    }
+    .dot.tp { background:#198754; }
+    .dot.fp { background:#dc3545; }
+    .dot.fn { background:#fd7e14; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  </style>
+
+  <div class="card mb-3">
+    <div class="card-header">测试集帧轴可视化（每个视频：TP / FP / FN 的帧位置）</div>
+    <div class="card-body">
+
+      <div class="timeline-meta small text-muted mb-2">
+        <span class="badge-dot"><span class="dot tp"></span>TP（预测=切点 且 GT=切点）</span>
+        <span class="badge-dot"><span class="dot fp"></span>FP（预测=切点 但 GT=非切点）</span>
+        <span class="badge-dot"><span class="dot fn"></span>FN（GT=切点 但 预测=非切点）</span>
+        <span class="ms-auto">提示：鼠标悬停点可看帧号</span>
+      </div>
+
+      {% if test_timelines and test_timelines|length > 0 %}
+        <div class="row g-3">
+          {% for v in test_timelines %}
+          <div class="col-12">
+            <div class="border rounded timeline-wrap">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                  <div class="fw-bold">{{ v.vid }}</div>
+                  <div class="small text-muted">
+                    total_frames: <span class="mono">{{ v.total_frames }}</span>
+                    &nbsp;|&nbsp; TP <span class="mono">{{ v.tp }}</span>
+                    FP <span class="mono">{{ v.fp }}</span>
+                    FN <span class="mono">{{ v.fn }}</span>
+                  </div>
+                </div>
+                <div class="small text-muted">
+                  GT cuts: <span class="mono">{{ v.gt_frames|length }}</span>
+                  Pred cuts: <span class="mono">{{ v.pred_frames|length }}</span>
+                </div>
+              </div>
+
+              <div class="timeline-axis">
+                <div class="timeline-line"></div>
+
+                {% set denom = (v.total_frames - 1) if v.total_frames and v.total_frames > 1 else 1 %}
+
+                {% for f in v.tp_frames %}
+                  {% set left = (f / denom) * 100 %}
+                  <span class="tick tp" style="left: {{ left }}%;" title="TP @ frame {{ f }}"></span>
+                {% endfor %}
+
+                {% for f in v.fp_frames %}
+                  {% set left = (f / denom) * 100 %}
+                  <span class="tick fp" style="left: {{ left }}%;" title="FP @ frame {{ f }}"></span>
+                {% endfor %}
+
+                {% for f in v.fn_frames %}
+                  {% set left = (f / denom) * 100 %}
+                  <span class="tick fn" style="left: {{ left }}%;" title="FN @ frame {{ f }}"></span>
+                {% endfor %}
+              </div>
+
+              <div class="small text-muted mt-2">
+                <span>轴左侧≈frame 0</span>
+                <span class="float-end">轴右侧≈frame {{ v.total_frames - 1 }}</span>
+              </div>
+
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-muted">未找到 per_video 数据，无法生成按视频的帧轴可视化。</div>
+      {% endif %}
+
+    </div>
+  </div>
+
+
+  <!-- 测试集其它sheet：可追溯数据（折叠预览，防卡） -->
+  <div class="card mb-3">
+    <div class="card-header">测试集数据明细（Excel 其它 Sheets 预览）</div>
+    <div class="card-body">
+
+      {% if test_dataset_summary %}
+      <details class="mb-3">
+        <summary><code>dataset_summary</code>（显示前 {{ test_dataset_summary.shown_rows }} 行 / 共 {{ test_dataset_summary.total_rows }} 行）</summary>
+        <div class="table-responsive mt-2">
+          <table class="table table-sm table-bordered">
+            <thead>
+              <tr>
+                {% for h in test_dataset_summary.headers %}
+                <th>{{ h }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in test_dataset_summary.rows %}
+              <tr>
+                {% for c in r %}
+                <td>{{ c }}</td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </details>
+      {% endif %}
+
+      {% if test_per_video %}
+      <details class="mb-3">
+        <summary><code>per_video</code>（显示前 {{ test_per_video.shown_rows }} 行 / 共 {{ test_per_video.total_rows }} 行）</summary>
+        <div class="table-responsive mt-2">
+          <table class="table table-sm table-bordered">
+            <thead>
+              <tr>
+                {% for h in test_per_video.headers %}
+                <th>{{ h }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in test_per_video.rows %}
+              <tr>
+                {% for c in r %}
+                <td>{{ c }}</td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </details>
+      {% endif %}
+
+      {% if test_classification_report %}
+      <details class="mb-3">
+        <summary><code>classification_report</code>（显示前 {{ test_classification_report.shown_rows }} 行 / 共 {{ test_classification_report.total_rows }} 行）</summary>
+        <div class="table-responsive mt-2">
+          <table class="table table-sm table-bordered">
+            <thead>
+              <tr>
+                {% for h in test_classification_report.headers %}
+                <th>{{ h }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in test_classification_report.rows %}
+              <tr>
+                {% for c in r %}
+                <td>{{ c }}</td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </details>
+      {% endif %}
+
+      {% if (not test_dataset_summary) and (not test_per_video) and (not test_classification_report) %}
+      <div class="text-muted">该报告未找到 <code>dataset_summary</code> / <code>per_video</code> / <code>classification_report</code> 表。</div>
+      {% endif %}
+    </div>
+  </div>
+
+
+  <!-- 下载区 -->
+  <div class="card mb-3">
+    <div class="card-header">下载</div>
+    <div class="card-body">
+      <a class="btn btn-sm btn-secondary me-2" href="{{ url_for('download_report', report_id=report_id) }}">下载整包 ZIP</a>
+
+      <hr />
+
+      {% if model_files %}
+        <div class="mb-3">
+          <div class="fw-bold mb-1">模型文件</div>
+          <ul class="mb-0">
+            {% for file in model_files %}
+              <li><a href="{{ url_for('download_file', report_id=report_id, filename=file) }}">{{ file.rsplit('/', 1)[-1] }}</a></li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      {% if excel_files %}
+        <div class="mb-0">
+          <div class="fw-bold mb-1">Excel 文件</div>
+          <ul class="mb-0">
+            {% for file in excel_files %}
+              <li><a href="{{ url_for('download_file', report_id=report_id, filename=file) }}">{{ file.rsplit('/', 1)[-1] }}</a></li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+{% endblock %}
+
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const curves = {{ train_curves|tojson }};
+  const epochs = curves.epoch || [];
+
+  function lineChart(canvasId, labels, datasets, beginAtZero=true) {
+    const el = document.getElementById(canvasId);
+    if (!el) return;
+    const ctx = el.getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { display: true } },
+        scales: { y: { beginAtZero: beginAtZero } }
+      }
+    });
+  }
+
+  // 1) Loss
+  lineChart('c1_loss', epochs, [{
+    label: 'loss',
+    data: curves.loss || [],
+    tension: 0
+  }], true);
+
+  // 2) PRF
+  lineChart('c2_prf', epochs, [
+    { label: 'precision', data: curves.precision || [], tension: 0 },
+    { label: 'recall', data: curves.recall || [], tension: 0 },
+    { label: 'f1', data: curves.f1 || [], tension: 0 }
+  ], true);
+
+  // 3) AP / AUC
+  lineChart('c3_auc', epochs, [
+    { label: 'AP(PR-AUC)', data: curves.pr_auc_ap || [], tension: 0 },
+    { label: 'AUC(ROC)', data: curves.roc_auc || [], tension: 0 }
+  ], true);
+
+  // 4) Accuracy
+  lineChart('c4_acc', epochs, [{
+    label: 'acc',
+    data: curves.acc || [],
+    tension: 0
+  }], true);
+
+  // 5) pos_pred_rate
+  lineChart('c5_posrate', epochs, [{
+    label: 'pos_pred_rate',
+    data: curves.pos_pred_rate || [],
+    tension: 0
+  }], true);
+
+  // 6) lr
+  lineChart('c6_lr', epochs, [{
+    label: 'lr',
+    data: curves.lr || [],
+    tension: 0
+  }], false);
+</script>
+{% endblock %}

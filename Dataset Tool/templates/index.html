@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Dataset Tool (8003)</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { padding-top: 18px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  </style>
+</head>
+<body class="bg-light">
+<div class="container">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <div class="h4 mb-0">训练集制作工具</div>
+      <div class="text-secondary small mono">BUILD: {{ build_id }}</div>
+    </div>
+    <div class="text-secondary small">
+      端口：8003 · FPS默认24 · 输出720p
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <form method="post" action="{{ url_for('start') }}">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">选择视频（movie目录）</label>
+            <select name="video_file" class="form-select" required>
+              <option value="">-- 请选择 --</option>
+              {% for v in videos %}
+                <option value="{{ v }}">{{ v }} {% if not xml_exists[v] %}(缺少同名XML){% endif %}</option>
+              {% endfor %}
+            </select>
+            <div class="form-text">XML目录下需有同名 xml：例如 V001.mp4 → V001.xml</div>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">运行模式</label>
+            <select name="mode" class="form-select">
+              <option value="all">全部（分帧 + 剪辑点样本 + 非剪辑点样本）</option>
+              <option value="extract">仅分帧</option>
+              <option value="cut">分帧 + 仅剪辑点样本</option>
+              <option value="noncut">分帧 + 仅非剪辑点样本</option>
+            </select>
+          </div>
+
+          <div class="col-md-12"><hr class="my-1"/></div>
+
+          <div class="col-md-6">
+            <label class="form-label">movie_dir</label>
+            <input class="form-control mono" name="movie_dir" value="{{ movie_dir }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">xml_dir</label>
+            <input class="form-control mono" name="xml_dir" value="{{ xml_dir }}">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">frame_dir（输出帧根目录）</label>
+            <input class="form-control mono" name="frame_dir" value="{{ defaults.FRAME_DIR }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">out_cut_dir（剪辑点样本根目录）</label>
+            <input class="form-control mono" name="out_cut_dir" value="{{ defaults.OUT_CUT_DIR }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">out_noncut_dir（非剪辑样本根目录）</label>
+            <input class="form-control mono" name="out_noncut_dir" value="{{ defaults.OUT_NONCUT_DIR }}">
+          </div>
+
+          <div class="col-md-12"><hr class="my-1"/></div>
+
+          <div class="col-md-2">
+            <label class="form-label">FPS</label>
+            <input type="number" class="form-control" name="fps" value="24" min="1" max="240">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">输出宽</label>
+            <input type="number" class="form-control" name="out_w" value="1280">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">输出高</label>
+            <input type="number" class="form-control" name="out_h" value="720">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">剪辑点前帧数 pre</label>
+            <input type="number" class="form-control" name="pre_frames" value="10" min="0" max="5000">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">剪辑点后帧数 post</label>
+            <input type="number" class="form-control" name="post_frames" value="10" min="0" max="5000">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">非剪辑段长度（帧）</label>
+            <input type="number" class="form-control" name="noncut_len" value="20" min="1" max="20000">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">非剪辑段数量</label>
+            <input type="number" class="form-control" name="noncut_count" value="10" min="0" max="100000">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">非剪辑起始编号（Vxxx）</label>
+            <input type="number" class="form-control" name="start_id" value="1" min="0" max="999999">
+            <div class="form-text">输出会命名为 V001.mp4、V002.mp4… 自动递增</div>
+          </div>
+
+          <div class="col-md-3 d-flex align-items-end">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="force_extract" id="force_extract">
+              <label class="form-check-label" for="force_extract">
+                强制重新分帧（不复用已存在帧）
+              </label>
+            </div>
+          </div>
+
+          <div class="col-md-12 d-flex gap-2">
+            <button class="btn btn-primary" type="submit">开始执行</button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('index') }}">刷新</a>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">最近任务</div>
+    <div class="card-body">
+      {% if jobs|length == 0 %}
+        <div class="text-secondary">暂无任务</div>
+      {% else %}
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>job</th>
+                <th>video</th>
+                <th>mode</th>
+                <th>status</th>
+                <th>msg</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for j in jobs %}
+              <tr>
+                <td class="mono">{{ j.job_id }}</td>
+                <td>{{ j.video_name }}</td>
+                <td>{{ j.mode }}</td>
+                <td>
+                  {% if j.status == 'done' %}
+                    <span class="badge bg-success">done</span>
+                  {% elif j.status == 'error' %}
+                    <span class="badge bg-danger">error</span>
+                  {% elif j.status == 'running' %}
+                    <span class="badge bg-primary">running</span>
+                  {% else %}
+                    <span class="badge bg-secondary">{{ j.status }}</span>
+                  {% endif %}
+                </td>
+                <td class="text-secondary">{{ j.message }}</td>
+                <td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('job_page', job_id=j.job_id) }}">查看</a></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="text-secondary small mt-3">
+    提示：输出帧默认保存在 <span class="mono">p/视频名/</span>；输出视频默认在 <span class="mono">out_cut/视频名/</span> 和 <span class="mono">out_noncut/视频名/</span>
+  </div>
+</div>
+</body>
+</html>
