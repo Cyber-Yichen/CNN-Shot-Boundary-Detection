@@ -1,5 +1,7 @@
 # 🎬 CNN-Shot-Boundary-Detection
 
+English | [简体中文](README.zh-CN.md)
+
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.8+-blue.svg" alt="Python">
   <img src="https://img.shields.io/badge/PyTorch-2.0+-red.svg" alt="PyTorch">
